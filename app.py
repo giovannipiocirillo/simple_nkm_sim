@@ -20,10 +20,7 @@ nomi_variabili = {
     'c': 'Consumo (c)', 'a': 'Produttività (a)', 'is': 'Shock Monetario (is)'
 }
 
-# --- BARRA LATERALE: FORM ---
-st.sidebar.header("Pannello di Controllo")
-
-# Tutto ciò che è dentro questo 'with' non aggiornerà la pagina finché non si clicca il submit
+# --- BARRA LATERALE: FORM DI INSERIMENTO ---
 with st.sidebar.form("pannello_controllo"):
     st.subheader("1. Impostazioni Shock e Grafici")
     tipo_shock = st.selectbox("Tipo di Shock:", ["Shock Monetario (ms)", "Shock Tecnologico (eps)"])
@@ -46,13 +43,32 @@ with st.sidebar.form("pannello_controllo"):
     phip = st.slider("φ_π - Taylor parameter", min_value=1.01, max_value=3.0, value=1.5, step=0.1)
     rhom = st.slider("ρ_m - Persistenza shock monetario", min_value=0.01, max_value=0.99, value=0.5, step=0.01)
 
-    # Il pulsante di submit interno al form
+    # Pulsante per confermare e lanciare Dynare
     btn_aggiungi = st.form_submit_button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
 
-# Il pulsante per pulire resta fuori dal form, così funziona istantaneamente
-if st.sidebar.button("🗑️ Pulisci Tutti gli Scenari", use_container_width=True):
-    st.session_state.scenari = []
-    st.rerun()
+# --- BARRA LATERALE: GESTIONE SCENARI ---
+st.sidebar.subheader("3. Scenari Salvati")
+
+# Se ci sono scenari in memoria, creiamo la lista con i pulsanti di eliminazione
+if len(st.session_state.scenari) > 0:
+    for i, scenario in enumerate(st.session_state.scenari):
+        # Dividiamo la riga in due colonne: una larga (5) per il nome, una stretta (1) per la "X"
+        col_nome, col_elimina = st.sidebar.columns([5, 1])
+        
+        col_nome.markdown(f"<span style='font-size:0.9em;'>{scenario['nome']}</span>", unsafe_allow_html=True)
+        
+        # Se si clicca la 'X', eliminiamo quello specifico scenario dalla lista e ricarichiamo la pagina
+        if col_elimina.button("❌", key=f"elimina_{i}", help="Rimuovi questo scenario"):
+            st.session_state.scenari.pop(i)
+            st.rerun()
+
+    st.sidebar.divider()
+    # Pulsante per svuotare tutto in un colpo solo
+    if st.sidebar.button("🗑️ Svuota Tutti gli Scenari", use_container_width=True):
+        st.session_state.scenari = []
+        st.rerun()
+else:
+    st.sidebar.info("Nessun scenario attualmente salvato.")
 
 # --- ESECUZIONE MODELLO ---
 if btn_aggiungi:
@@ -115,7 +131,10 @@ if btn_aggiungi:
         for campo in irfs.dtype.names:
             irf_dict[campo] = irfs[campo].flatten()
             
-        nome_scenario = f"Scen. {len(st.session_state.scenari)+1}: {tipo_shock[:8]} (ω={omega}, φ_π={phip})"
+        # Per distinguere meglio, usiamo il numero reale basato sulla cronologia
+        # anche se eliminiamo quelli in mezzo
+        num_scenari_totali = len(st.session_state.scenari) + 1
+        nome_scenario = f"Scen. {num_scenari_totali}: {tipo_shock[:8]} (ω={omega}, φ_π={phip})"
         
         st.session_state.scenari.append({
             'nome': nome_scenario,
@@ -123,6 +142,9 @@ if btn_aggiungi:
             'tempo': np.arange(trimestri),
             'suffisso': '_ms' if "Monetario" in tipo_shock else '_eps'
         })
+        
+        # Forza un ricaricamento della pagina in modo che la nuova voce compaia subito nella barra laterale
+        st.rerun()
         
     except Exception as e:
         st.error(f"Errore durante l'estrazione dei dati: {e}")
