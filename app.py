@@ -36,61 +36,30 @@ with st.sidebar.form("pannello_controllo"):
 
     st.divider()
     st.subheader("2. Parametri Strutturali")
-    beta = st.slider(
-        "β - Fattore di sconto del consumo", 
-        min_value=0.90, max_value=0.99, value=0.99, step=0.01,
-        help="Esprime la preferenza della famiglie per il consumo futuro (“pazienza” delle famiglie)."
-    )
-    
-    gamma = st.slider(
-        "γ - Inverso della Frisch elasticity", 
-        min_value=0.1, max_value=3.0, value=1.0, step=0.1,
-        help="Misura la variazione dell’offerta di lavoro al variare del salario. Pertanto, maggiore è la propensione delle famiglie nell’offrire lavoro all’aumentare del salario, maggiore è la Frisch Elasticity e minore è γ."
-    )
-    
-    omega = st.slider(
-        "ω - Stickiness parameter", 
-        min_value=0.01, max_value=1.0, value=0.75, step=0.01,
-        help="Il parametro ω (stickiness parameter) può essere interpretato anche come la probabilità che la generica impresa in ogni periodo t sia caratterizzata da prezzi vischiosi: questa ipotesi è la fonte delle rigidità nominali nel modello NKM.\n\nPer determinare l’indice aggregato dei prezzi nell’economia si può introdurre una semplice regola di Calvo (Calvo, 1983), per la quale le imprese che non riescono ad ottimizzare i prezzi al tempo t applicheranno il prezzo aggregato del periodo precedente t-1."
-    )
-    
-    rhoa = st.slider(
-        "ρ_a - Persistenza shock TFP", 
-        min_value=0.01, max_value=0.99, value=0.7, step=0.01
-    )
-    
-    phip = st.slider(
-        "φ_π - Taylor parameter", 
-        min_value=1.01, max_value=3.0, value=1.5, step=0.1,
-        help="Sintetizza il peso assegnato dalla banca centrale all’obiettivo di stabilità dell’inflazione nel proprio mandato. Secondo il principio di Taylor, il valore del Taylor parameter dovrebbe essere maggiore di uno (φ_π > 1), in quanto è opportuno che la banca centrale risponda in modo più che proporzionale agli scostamenti dell’inflazione dal suo livello obiettivo."
-    )
-    
-    rhom = st.slider(
-        "ρ_m - Persistenza shock monetario", 
-        min_value=0.01, max_value=0.95, value=0.5, step=0.01
-    )
-    
+    beta = st.slider("β - Fattore di sconto", min_value=0.90, max_value=0.99, value=0.99, step=0.01)
+    gamma = st.slider("γ - Inverso Frisch elasticity", min_value=0.1, max_value=3.0, value=1.0, step=0.1)
+    omega = st.slider("ω - Stickiness parameter", min_value=0.01, max_value=1.0, value=0.75, step=0.01)
+    rhoa = st.slider("ρ_a - Persistenza shock TFP", min_value=0.01, max_value=0.99, value=0.7, step=0.01)
+    phip = st.slider("φ_π - Taylor parameter", min_value=1.01, max_value=3.0, value=1.5, step=0.1)
+    rhom = st.slider("ρ_m - Persistenza shock monetario", min_value=0.01, max_value=0.99, value=0.5, step=0.01)
+
     # Pulsante per confermare e lanciare Dynare
     btn_aggiungi = st.form_submit_button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
 
 # --- BARRA LATERALE: GESTIONE SCENARI ---
 st.sidebar.subheader("3. Scenari Salvati")
 
-# Se ci sono scenari in memoria, creiamo la lista con i pulsanti di eliminazione
 if len(st.session_state.scenari) > 0:
     for i, scenario in enumerate(st.session_state.scenari):
-        # Dividiamo la riga in due colonne: una larga (5) per il nome, una stretta (1) per la "X"
         col_nome, col_elimina = st.sidebar.columns([5, 1])
-        
         col_nome.markdown(f"<span style='font-size:0.9em;'>{scenario['nome']}</span>", unsafe_allow_html=True)
         
-        # Se si clicca la 'X', eliminiamo quello specifico scenario dalla lista e ricarichiamo la pagina
         if col_elimina.button("❌", key=f"elimina_{i}", help="Rimuovi questo scenario"):
             st.session_state.scenari.pop(i)
             st.rerun()
 
     st.sidebar.divider()
-    # Pulsante per svuotare tutto in un colpo solo
+    # ECCO L'UNICO PULSANTE DI PULIZIA GLOBALE
     if st.sidebar.button("🗑️ Svuota Tutti gli Scenari", use_container_width=True):
         st.session_state.scenari = []
         st.rerun()
@@ -158,8 +127,6 @@ if btn_aggiungi:
         for campo in irfs.dtype.names:
             irf_dict[campo] = irfs[campo].flatten()
             
-        # Per distinguere meglio, usiamo il numero reale basato sulla cronologia
-        # anche se eliminiamo quelli in mezzo
         num_scenari_totali = len(st.session_state.scenari) + 1
         nome_scenario = f"Scen. {num_scenari_totali}: {tipo_shock[:8]} (ω={omega}, φ_π={phip})"
         
@@ -170,7 +137,6 @@ if btn_aggiungi:
             'suffisso': '_ms' if "Monetario" in tipo_shock else '_eps'
         })
         
-        # Forza un ricaricamento della pagina in modo che la nuova voce compaia subito nella barra laterale
         st.rerun()
         
     except Exception as e:
