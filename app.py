@@ -21,6 +21,14 @@ nomi_variabili = {
 }
 
 # --- BARRA LATERALE: FORM DI INSERIMENTO ---
+with open("teoria_nkm.pdf", "rb") as file_pdf:
+    st.sidebar.download_button(
+        label="📄 Scarica la Teoria in PDF",
+        data=file_pdf,
+        file_name="Teoria_NKM_DSGE.pdf",
+        mime="application/pdf"
+    )
+    
 with st.sidebar.form("pannello_controllo"):
     st.subheader("1. Impostazioni Shock e Grafici")
     tipo_shock = st.selectbox("Tipo di Shock:", ["Shock Monetario (ms)", "Shock Tecnologico (eps)"])
