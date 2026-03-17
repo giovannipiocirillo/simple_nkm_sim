@@ -27,7 +27,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 st.title("Simulatore NKM DSGE")
-st.markdown("Imposta i parametri, scegli lo shock e clicca su **Aggiungi Scenario** per stimare l'impatto di uno shock macroeconomico")
+st.markdown("Imposta i parametri, scegli lo shock e clicca su **Aggiungi scenario** per stimare l'impatto di uno shock macroeconomico")
 
 # --- INIZIALIZZAZIONE DELLA MEMORIA (SESSION STATE) ---
 if 'scenari' not in st.session_state:
