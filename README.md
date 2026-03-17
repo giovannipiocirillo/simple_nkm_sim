@@ -17,6 +17,10 @@ This platform allows students, researchers, and economics enthusiasts to easily 
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
 ![GNU Octave](https://img.shields.io/badge/GNU_Octave-025590?style=for-the-badge&logo=gnu-octave&logoColor=white)
 
+## Live Demo
+Simulate a macroeconomic shock here:  
+👉 **[https://huggingface.co/spaces/giovannipiocirillo/simple_nkm_sim](https://huggingface.co/spaces/giovannipiocirillo/simple_nkm_sim)**
+
 ## Key Features
 * **Multi-Scenario comparison**: run multiple simulations with different parameters (e.g., varying the Calvo stickiness parameter $\omega$ or the Taylor rule weight $\phi_\pi$) and overlay the IRFs on the same interactive graphs.
 * **Interactive Plotly charts**: zoom, pan, hover for exact values, and toggle specific scenarios on/off directly from the legend.
