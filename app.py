@@ -23,18 +23,7 @@ nomi_variabili = {
 # --- BARRA LATERALE: FORM DI INSERIMENTO ---
 # --- LINK ALLA TEORIA ---
 # Sostituisci TUO_USERNAME e NOME_REPO con i tuoi dati reali di GitHub
-url_pdf = "https://github.com/giovannipiocirillo/simple_nkm_sim/blob/main/teoria_nkm.pdf"
-
-st.sidebar.markdown(
-    f"""
-    <a href="{url_pdf}" target="_blank" style="text-decoration: none;">
-        <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; text-align: center; border: 1px solid #d1d5db; margin-bottom: 15px;">
-            📖 <b>Leggi la Teoria (PDF)</b>
-        </div>
-    </a>
-    """, 
-    unsafe_allow_html=True
-)
+st.sidebar.markdown("[Vai alla pagina della teoria 📖](https://tuo-nome.github.io/teoria-nkm)")
     
 with st.sidebar.form("pannello_controllo"):
     st.subheader("1. Impostazioni Shock e Grafici")
