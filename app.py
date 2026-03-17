@@ -8,226 +8,199 @@ from scipy.io import loadmat
 st.set_page_config(page_title="NKM DSGE con Dynare", layout="wide")
 
 st.title("Simulatore NKM DSGE (Multiscenario)")
+st.markdown("Imposta i parametri, scegli lo shock e clicca su **Aggiungi Scenario**. Puoi lanciare più simulazioni di fila per vederle sovrapposte!")
 
-st.title("Simulatore NKM DSGE (Multiscenario)")
+# --- INIZIALIZZAZIONE DELLA MEMORIA (SESSION STATE) ---
+if 'scenari' not in st.session_state:
+    st.session_state.scenari = []
 
-# Creazione delle due schede
-tab_simulatore, tab_teoria = st.tabs(["📊 Simulatore", "📚 Teoria del Modello"])
+nomi_variabili = {
+    'y': 'Output (y)', 'pi': 'Inflazione (π)', 'r': 'Tasso di Interesse (r)', 
+    'w': 'Salario (w)', 'mc': 'Costo Marginale (mc)', 'l': 'Lavoro (l)', 
+    'c': 'Consumo (c)', 'a': 'Produttività (a)', 'is': 'Shock Monetario (is)'
+}
 
-with tab_simulatore:
-    st.markdown("Imposta i parametri, scegli lo shock e clicca su **Aggiungi Scenario**. Puoi lanciare più simulazioni di fila per vederle sovrapposte!")
+# --- BARRA LATERALE: FORM DI INSERIMENTO ---
+with st.sidebar.form("pannello_controllo"):
+    st.subheader("1. Impostazioni Shock e Grafici")
+    tipo_shock = st.selectbox("Tipo di Shock:", ["Shock Monetario (ms)", "Shock Tecnologico (eps)"])
+    intensita_shock = st.number_input("Intensità dello shock:", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
+    trimestri = st.slider("Orizzonte temporale (trimestri):", min_value=10, max_value=100, value=40, step=5)
+
+    variabili_scelte = st.multiselect(
+        "Variabili da osservare:",
+        options=list(nomi_variabili.keys()),
+        default=['y', 'pi', 'r'],
+        format_func=lambda x: nomi_variabili[x]
+    )
+
+    st.divider()
+    st.subheader("2. Parametri Strutturali")
+    beta = st.slider(
+        "β - Fattore di sconto del consumo", 
+        min_value=0.90, max_value=0.99, value=0.99, step=0.01,
+        help="Esprime la preferenza della famiglie per il consumo futuro (“pazienza” delle famiglie)."
+    )
     
-    # --- INIZIALIZZAZIONE DELLA MEMORIA (SESSION STATE) ---
-    if 'scenari' not in st.session_state:
+    gamma = st.slider(
+        "γ - Inverso della Frisch elasticity", 
+        min_value=0.1, max_value=3.0, value=1.0, step=0.1,
+        help="Misura la variazione dell’offerta di lavoro al variare del salario. Pertanto, maggiore è la propensione delle famiglie nell’offrire lavoro all’aumentare del salario, maggiore è la Frisch Elasticity e minore è γ."
+    )
+    
+    omega = st.slider(
+        "ω - Stickiness parameter", 
+        min_value=0.01, max_value=1.0, value=0.75, step=0.01,
+        help="Il parametro ω (stickiness parameter) può essere interpretato anche come la probabilità che la generica impresa in ogni periodo t sia caratterizzata da prezzi vischiosi: questa ipotesi è la fonte delle rigidità nominali nel modello NKM.\n\nPer determinare l’indice aggregato dei prezzi nell’economia si può introdurre una semplice regola di Calvo (Calvo, 1983), per la quale le imprese che non riescono ad ottimizzare i prezzi al tempo t applicheranno il prezzo aggregato del periodo precedente t-1."
+    )
+    
+    rhoa = st.slider(
+        "ρ_a - Persistenza shock TFP", 
+        min_value=0.01, max_value=0.99, value=0.7, step=0.01
+    )
+    
+    phip = st.slider(
+        "φ_π - Taylor parameter", 
+        min_value=1.01, max_value=3.0, value=1.5, step=0.1,
+        help="Sintetizza il peso assegnato dalla banca centrale all’obiettivo di stabilità dell’inflazione nel proprio mandato. Secondo il principio di Taylor, il valore del Taylor parameter dovrebbe essere maggiore di uno (φ_π > 1), in quanto è opportuno che la banca centrale risponda in modo più che proporzionale agli scostamenti dell’inflazione dal suo livello obiettivo."
+    )
+    
+    rhom = st.slider(
+        "ρ_m - Persistenza shock monetario", 
+        min_value=0.01, max_value=0.95, value=0.5, step=0.01
+    )
+
+    # Pulsante per confermare e lanciare Dynare
+    btn_aggiungi = st.form_submit_button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
+
+# --- BARRA LATERALE: GESTIONE SCENARI ---
+st.sidebar.subheader("3. Scenari Salvati")
+
+if len(st.session_state.scenari) > 0:
+    for i, scenario in enumerate(st.session_state.scenari):
+        col_nome, col_elimina = st.sidebar.columns([5, 1])
+        col_nome.markdown(f"<span style='font-size:0.9em;'>{scenario['nome']}</span>", unsafe_allow_html=True)
+        
+        if col_elimina.button("❌", key=f"elimina_{i}", help="Rimuovi questo scenario"):
+            st.session_state.scenari.pop(i)
+            st.rerun()
+
+    st.sidebar.divider()
+    # ECCO L'UNICO PULSANTE DI PULIZIA GLOBALE
+    if st.sidebar.button("🗑️ Svuota Tutti gli Scenari", use_container_width=True):
         st.session_state.scenari = []
-    
-    nomi_variabili = {
-        'y': 'Output (y)', 'pi': 'Inflazione (π)', 'r': 'Tasso di Interesse (r)', 
-        'w': 'Salario (w)', 'mc': 'Costo Marginale (mc)', 'l': 'Lavoro (l)', 
-        'c': 'Consumo (c)', 'a': 'Produttività (a)', 'is': 'Shock Monetario (is)'
-    }
-    
-    # --- BARRA LATERALE: FORM DI INSERIMENTO ---
-    with st.sidebar.form("pannello_controllo"):
-        st.subheader("1. Impostazioni Shock e Grafici")
-        tipo_shock = st.selectbox("Tipo di Shock:", ["Shock Monetario (ms)", "Shock Tecnologico (eps)"])
-        intensita_shock = st.number_input("Intensità dello shock:", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
-        trimestri = st.slider("Orizzonte temporale (trimestri):", min_value=10, max_value=100, value=40, step=5)
-    
-        variabili_scelte = st.multiselect(
-            "Variabili da osservare:",
-            options=list(nomi_variabili.keys()),
-            default=['y', 'pi', 'r'],
-            format_func=lambda x: nomi_variabili[x]
-        )
-    
-        st.divider()
-        st.subheader("2. Parametri Strutturali")
-        beta = st.slider(
-            "β - Fattore di sconto del consumo", 
-            min_value=0.90, max_value=0.99, value=0.99, step=0.01,
-            help="Esprime la preferenza della famiglie per il consumo futuro (“pazienza” delle famiglie)."
-        )
-        
-        gamma = st.slider(
-            "γ - Inverso della Frisch elasticity", 
-            min_value=0.1, max_value=3.0, value=1.0, step=0.1,
-            help="Misura la variazione dell’offerta di lavoro al variare del salario. Pertanto, maggiore è la propensione delle famiglie nell’offrire lavoro all’aumentare del salario, maggiore è la Frisch Elasticity e minore è γ."
-        )
-        
-        omega = st.slider(
-            "ω - Stickiness parameter", 
-            min_value=0.01, max_value=1.0, value=0.75, step=0.01,
-            help="Il parametro ω (stickiness parameter) può essere interpretato anche come la probabilità che la generica impresa in ogni periodo t sia caratterizzata da prezzi vischiosi: questa ipotesi è la fonte delle rigidità nominali nel modello NKM.\n\nPer determinare l’indice aggregato dei prezzi nell’economia si può introdurre una semplice regola di Calvo (Calvo, 1983), per la quale le imprese che non riescono ad ottimizzare i prezzi al tempo t applicheranno il prezzo aggregato del periodo precedente t-1."
-        )
-        
-        rhoa = st.slider(
-            "ρ_a - Persistenza shock TFP", 
-            min_value=0.01, max_value=0.99, value=0.7, step=0.01
-        )
-        
-        phip = st.slider(
-            "φ_π - Taylor parameter", 
-            min_value=1.01, max_value=3.0, value=1.5, step=0.1,
-            help="Sintetizza il peso assegnato dalla banca centrale all’obiettivo di stabilità dell’inflazione nel proprio mandato. Secondo il principio di Taylor, il valore del Taylor parameter dovrebbe essere maggiore di uno (φ_π > 1), in quanto è opportuno che la banca centrale risponda in modo più che proporzionale agli scostamenti dell’inflazione dal suo livello obiettivo."
-        )
-        
-        rhom = st.slider(
-            "ρ_m - Persistenza shock monetario", 
-            min_value=0.01, max_value=0.95, value=0.5, step=0.01
-        )
-    
-        # Pulsante per confermare e lanciare Dynare
-        btn_aggiungi = st.form_submit_button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
-    
-    # --- BARRA LATERALE: GESTIONE SCENARI ---
-    st.sidebar.subheader("3. Scenari Salvati")
-    
-    if len(st.session_state.scenari) > 0:
-        for i, scenario in enumerate(st.session_state.scenari):
-            col_nome, col_elimina = st.sidebar.columns([5, 1])
-            col_nome.markdown(f"<span style='font-size:0.9em;'>{scenario['nome']}</span>", unsafe_allow_html=True)
-            
-            if col_elimina.button("❌", key=f"elimina_{i}", help="Rimuovi questo scenario"):
-                st.session_state.scenari.pop(i)
-                st.rerun()
-    
-        st.sidebar.divider()
-        # ECCO L'UNICO PULSANTE DI PULIZIA GLOBALE
-        if st.sidebar.button("🗑️ Svuota Tutti gli Scenari", use_container_width=True):
-            st.session_state.scenari = []
-            st.rerun()
-    else:
-        st.sidebar.info("Nessun scenario attualmente salvato.")
-    
-    # --- ESECUZIONE MODELLO ---
-    if btn_aggiungi:
-        var_eps = intensita_shock if "Tecnologico" in tipo_shock else 0.0
-        var_ms = intensita_shock if "Monetario" in tipo_shock else 0.0
-    
-        mod_content = f"""
-        % NKM Linearizzato
-        var lambda c w l r pi mc a y is;
-        varexo eps ms;
-        parameters GAMMA OMEGA BETA KAPPA PHIP RHOA RHOM;
-        
-        GAMMA = {gamma};
-        OMEGA = {omega};
-        BETA = {beta};
-        KAPPA = (1-OMEGA)*(1-(BETA*OMEGA))/(OMEGA);
-        PHIP = {phip};
-        RHOA = {rhoa};
-        RHOM = {rhom};
-    
-        model(linear);
-        lambda = -c;
-        w = (GAMMA*l) - lambda;
-        lambda = lambda(+1) + r - pi(+1);
-        w = mc + a;
-        y = a + l;
-        y = c;
-        a = RHOA*a(-1) + eps;
-        r = (PHIP*pi) + is;
-        is = (RHOM*is(-1)) + ms;
-        pi = (KAPPA*mc) + (BETA*pi(+1));
-        end;
-    
-        steady; check;
-    
-        shocks;
-        var eps = {var_eps};
-        var ms = {var_ms};
-        end;
-    
-        stoch_simul(irf={trimestri}, noprint, nograph);
-        """
-        
-        with open("NKM_lin.mod", "w") as f:
-            f.write(mod_content)
-    
-        with st.spinner("Calcolo con Dynare in corso..."):
-            comando_octave = "addpath('/usr/lib/dynare/matlab'); dynare NKM_lin.mod;"
-            process = subprocess.run(["octave", "--no-gui", "--eval", comando_octave], capture_output=True, text=True)
-            
-        try:
-            file_risultati = glob.glob("**/NKM_lin_results.mat", recursive=True)
-            if not file_risultati:
-                raise FileNotFoundError("Il file NKM_lin_results non è stato trovato!")
-                
-            mat_data = loadmat(file_risultati[0])
-            irfs = mat_data['oo_'][0, 0]['irfs'][0, 0]
-            
-            irf_dict = {}
-            for campo in irfs.dtype.names:
-                irf_dict[campo] = irfs[campo].flatten()
-                
-            num_scenari_totali = len(st.session_state.scenari) + 1
-            nome_scenario = f"Scen. {num_scenari_totali}: {tipo_shock[:8]} (ω={omega}, φ_π={phip})"
-            
-            st.session_state.scenari.append({
-                'nome': nome_scenario,
-                'dati': irf_dict,
-                'tempo': np.arange(trimestri),
-                'suffisso': '_ms' if "Monetario" in tipo_shock else '_eps'
-            })
-            
-            st.rerun()
-            
-        except Exception as e:
-            st.error(f"Errore durante l'estrazione dei dati: {e}")
-            st.code(process.stdout)
-    
-    # --- VISUALIZZAZIONE GRAFICI ---
-    if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
-        st.subheader(f"Confronto Scenari ({trimestri} trimestri)")
-        
-        colori = ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b']
-        cols = st.columns(3) 
-        
-        for idx, var in enumerate(variabili_scelte):
-            col_attuale = cols[idx % 3] 
-            
-            with col_attuale:
-                fig, ax = plt.subplots(figsize=(5, 4))
-                
-                for j, scenario in enumerate(st.session_state.scenari):
-                    chiave_irf = f"{var}{scenario['suffisso']}"
-                    if chiave_irf in scenario['dati']:
-                        ax.plot(scenario['tempo'], scenario['dati'][chiave_irf], 
-                                color=colori[j % len(colori)], marker='.', label=scenario['nome'])
-                
-                ax.set_title(nomi_variabili[var], fontweight='bold')
-                ax.axhline(0, color='black', linestyle='--', linewidth=0.8)
-                ax.grid(True, alpha=0.3)
-                ax.set_xlabel("Trimestri")
-                
-                if idx == 0:
-                    ax.legend(fontsize='small', loc='best')
-                    
-                st.pyplot(fig)
-                plt.close(fig)
-    
-    elif len(st.session_state.scenari) == 0:
-        st.info("👈 Imposta i parametri nel form laterale e clicca su 'Aggiungi Scenario' per iniziare la simulazione.")
-    elif len(variabili_scelte) == 0:
-        st.warning("👈 Seleziona almeno una variabile da osservare nel menu a tendina.")
+        st.rerun()
+else:
+    st.sidebar.info("Nessun scenario attualmente salvato.")
 
+# --- ESECUZIONE MODELLO ---
+if btn_aggiungi:
+    var_eps = intensita_shock if "Tecnologico" in tipo_shock else 0.0
+    var_ms = intensita_shock if "Monetario" in tipo_shock else 0.0
 
-with tab_teoria:
-    st.header("Il Modello Neokeynesiano Base")
-    st.markdown("""
-    Il modello si basa su tre equazioni fondamentali linearizzate attorno allo steady state:
+    mod_content = f"""
+    % NKM Linearizzato
+    var lambda c w l r pi mc a y is;
+    varexo eps ms;
+    parameters GAMMA OMEGA BETA KAPPA PHIP RHOA RHOM;
     
-    **1. Nuova Curva IS (Lato Domanda):**
-    Rappresenta il comportamento ottimizzante delle famiglie (Equazione di Eulero).
-    """)
-    st.latex(r"y_t = E_t y_{t+1} - \frac{1}{\sigma} (r_t - E_t \pi_{t+1}) + \epsilon_t")
-    
-    st.markdown("""
-    **2. Nuova Curva di Phillips (Lato Offerta):**
-    Rappresenta le imprese che fissano i prezzi in modo scaglionato (Calvo pricing).
-    """)
-    st.latex(r"\pi_t = \beta E_t \pi_{t+1} + \kappa x_t")
-    
-    # eccetera...
+    GAMMA = {gamma};
+    OMEGA = {omega};
+    BETA = {beta};
+    KAPPA = (1-OMEGA)*(1-(BETA*OMEGA))/(OMEGA);
+    PHIP = {phip};
+    RHOA = {rhoa};
+    RHOM = {rhom};
 
+    model(linear);
+    lambda = -c;
+    w = (GAMMA*l) - lambda;
+    lambda = lambda(+1) + r - pi(+1);
+    w = mc + a;
+    y = a + l;
+    y = c;
+    a = RHOA*a(-1) + eps;
+    r = (PHIP*pi) + is;
+    is = (RHOM*is(-1)) + ms;
+    pi = (KAPPA*mc) + (BETA*pi(+1));
+    end;
+
+    steady; check;
+
+    shocks;
+    var eps = {var_eps};
+    var ms = {var_ms};
+    end;
+
+    stoch_simul(irf={trimestri}, noprint, nograph);
+    """
+    
+    with open("NKM_lin.mod", "w") as f:
+        f.write(mod_content)
+
+    with st.spinner("Calcolo con Dynare in corso..."):
+        comando_octave = "addpath('/usr/lib/dynare/matlab'); dynare NKM_lin.mod;"
+        process = subprocess.run(["octave", "--no-gui", "--eval", comando_octave], capture_output=True, text=True)
+        
+    try:
+        file_risultati = glob.glob("**/NKM_lin_results.mat", recursive=True)
+        if not file_risultati:
+            raise FileNotFoundError("Il file NKM_lin_results non è stato trovato!")
+            
+        mat_data = loadmat(file_risultati[0])
+        irfs = mat_data['oo_'][0, 0]['irfs'][0, 0]
+        
+        irf_dict = {}
+        for campo in irfs.dtype.names:
+            irf_dict[campo] = irfs[campo].flatten()
+            
+        num_scenari_totali = len(st.session_state.scenari) + 1
+        nome_scenario = f"Scen. {num_scenari_totali}: {tipo_shock[:8]} (ω={omega}, φ_π={phip})"
+        
+        st.session_state.scenari.append({
+            'nome': nome_scenario,
+            'dati': irf_dict,
+            'tempo': np.arange(trimestri),
+            'suffisso': '_ms' if "Monetario" in tipo_shock else '_eps'
+        })
+        
+        st.rerun()
+        
+    except Exception as e:
+        st.error(f"Errore durante l'estrazione dei dati: {e}")
+        st.code(process.stdout)
+
+# --- VISUALIZZAZIONE GRAFICI ---
+if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
+    st.subheader(f"Confronto Scenari ({trimestri} trimestri)")
+    
+    colori = ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b']
+    cols = st.columns(3) 
+    
+    for idx, var in enumerate(variabili_scelte):
+        col_attuale = cols[idx % 3] 
+        
+        with col_attuale:
+            fig, ax = plt.subplots(figsize=(5, 4))
+            
+            for j, scenario in enumerate(st.session_state.scenari):
+                chiave_irf = f"{var}{scenario['suffisso']}"
+                if chiave_irf in scenario['dati']:
+                    ax.plot(scenario['tempo'], scenario['dati'][chiave_irf], 
+                            color=colori[j % len(colori)], marker='.', label=scenario['nome'])
+            
+            ax.set_title(nomi_variabili[var], fontweight='bold')
+            ax.axhline(0, color='black', linestyle='--', linewidth=0.8)
+            ax.grid(True, alpha=0.3)
+            ax.set_xlabel("Trimestri")
+            
+            if idx == 0:
+                ax.legend(fontsize='small', loc='best')
+                
+            st.pyplot(fig)
+            plt.close(fig)
+
+elif len(st.session_state.scenari) == 0:
+    st.info("👈 Imposta i parametri nel form laterale e clicca su 'Aggiungi Scenario' per iniziare la simulazione.")
+elif len(variabili_scelte) == 0:
+    st.warning("👈 Seleziona almeno una variabile da osservare nel menu a tendina.")
