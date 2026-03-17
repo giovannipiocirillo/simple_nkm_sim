@@ -141,7 +141,9 @@ if btn_aggiungi:
             irf_dict[campo] = np.round(irfs[campo].flatten(), 4)
             
         num_scenari_totali = len(st.session_state.scenari) + 1
-        nome_scenario = f"Scen. {num_scenari_totali}: {tipo_shock[:8]} (ω={omega}, φ_π={phip})"
+        
+        # MODIFICA 1: Ora inseriamo TUTTI i parametri nella stringa del nome, abbreviando "Scen." in "S" per salvare spazio
+        nome_scenario = f"S{num_scenari_totali}: {tipo_shock[:8]} (β={beta}, γ={gamma}, ω={omega}, ρ_a={rhoa}, φ_π={phip}, ρ_m={rhom})"
         
         st.session_state.scenari.append({
             'nome': nome_scenario,
@@ -167,7 +169,7 @@ if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
     titoli_subplot = [nomi_variabili[v] for v in variabili_scelte]
     fig = make_subplots(rows=rows_count, cols=cols_count, subplot_titles=titoli_subplot)
     
-    colori = ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b']
+    colori = ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b', '#e377c2', '#7f7f7f', '#bcbd22', '#17becf']
     
     for idx, var in enumerate(variabili_scelte):
         riga = (idx // 3) + 1
@@ -202,7 +204,7 @@ if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
     
     st.plotly_chart(fig, use_container_width=True)
 
-    # 2. GENERAZIONE TABELLA DATI PER IL DOWNLOAD (TRADOTTA IN CARATTERI LATINI)
+    # 2. GENERAZIONE TABELLA DATI PER IL DOWNLOAD
     st.divider()
     st.markdown("### 📥 Esporta Dati")
     
@@ -210,8 +212,9 @@ if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
     for scenario in st.session_state.scenari:
         df_temp = pd.DataFrame({'Trimestre': scenario['tempo']})
         
-        # Puliamo il nome dello scenario dalle lettere greche specificamente per il CSV
-        nome_csv_pulito = scenario['nome'].replace("ω", "omega").replace("φ_π", "phi_pi").replace("π", "pi")
+        # MODIFICA 2: Aggiunto il rimpiazzo per TUTTE le nuove lettere greche usate nella stringa
+        nome_csv_pulito = scenario['nome'].replace("ω", "omega").replace("φ_π", "phi_pi").replace("π", "pi")\
+                                          .replace("β", "beta").replace("γ", "gamma").replace("ρ_a", "rho_a").replace("ρ_m", "rho_m")
         
         for var in variabili_scelte:
             chiave_irf = f"{var}{scenario['suffisso']}"
