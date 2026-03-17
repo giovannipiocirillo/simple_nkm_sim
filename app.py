@@ -23,7 +23,6 @@ nomi_variabili = {
 }
 
 # --- LINK ALLA TEORIA ---
-# Ricordati di sostituire questo link con il tuo link GitHub reale se usi il PDF
 url_pdf = "https://github.com/TUO_USERNAME/NOME_REPO/blob/main/teoria_nkm.pdf"
 st.sidebar.markdown(
     f"""
@@ -139,7 +138,7 @@ if btn_aggiungi:
         
         irf_dict = {}
         for campo in irfs.dtype.names:
-            irf_dict[campo] = irfs[campo].flatten()
+            irf_dict[campo] = np.round(irfs[campo].flatten(), 4)
             
         num_scenari_totali = len(st.session_state.scenari) + 1
         nome_scenario = f"Scen. {num_scenari_totali}: {tipo_shock[:8]} (ω={omega}, φ_π={phip})"
@@ -161,8 +160,6 @@ if btn_aggiungi:
 if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
     st.subheader(f"Confronto Scenari ({trimestri} trimestri)")
     
-    # 1. GENERAZIONE GRAFICI CON PLOTLY
-    # Calcoliamo le righe e colonne dinamiche (max 3 per riga)
     num_vars = len(variabili_scelte)
     cols_count = min(3, num_vars)
     rows_count = ((num_vars - 1) // 3) + 1
@@ -179,7 +176,6 @@ if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
         for j, scenario in enumerate(st.session_state.scenari):
             chiave_irf = f"{var}{scenario['suffisso']}"
             if chiave_irf in scenario['dati']:
-                # Mostriamo la legenda solo nel primo grafico per non ripeterla per ogni subplot
                 mostra_legenda = True if idx == 0 else False
                 
                 fig.add_trace(go.Scatter(
@@ -187,57 +183,50 @@ if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
                     y=scenario['dati'][chiave_irf],
                     mode='lines+markers',
                     name=scenario['nome'],
-                    legendgroup=scenario['nome'], # Raggruppa la legenda in modo che nasconda le linee su tutti i grafici
+                    legendgroup=scenario['nome'],
                     showlegend=mostra_legenda,
                     line=dict(color=colori[j % len(colori)]),
                     marker=dict(size=6)
                 ), row=riga, col=colonna)
         
-        # Linea orizzontale per lo zero (steady state)
         fig.add_hline(y=0, line_dash="dash", line_color="black", line_width=1, row=riga, col=colonna)
-        # Etichetta asse X
         fig.update_xaxes(title_text="Trimestri", row=riga, col=colonna)
 
-    # Impostazioni generali del layout Plotly
     altezza_totale = max(400, 300 * rows_count)
     fig.update_layout(
         height=altezza_totale, 
         margin=dict(t=50, l=20, r=20, b=20),
-        hovermode="x unified", # Mostra tutti i valori in verticale passandoci sopra il mouse
+        hovermode="x unified",
         legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1)
     )
     
     st.plotly_chart(fig, use_container_width=True)
 
-    # 2. GENERAZIONE TABELLA DATI PER IL DOWNLOAD
+    # 2. GENERAZIONE TABELLA DATI PER IL DOWNLOAD (TRADOTTA IN CARATTERI LATINI)
     st.divider()
     st.markdown("### 📥 Esporta Dati")
     
-    # Creiamo un DataFrame Pandas che unisce tutti gli scenari
     df_lista = []
     for scenario in st.session_state.scenari:
-        # Creiamo la tabella per il singolo scenario partendo dalla colonna "Trimestri"
         df_temp = pd.DataFrame({'Trimestre': scenario['tempo']})
         
-        # Aggiungiamo le colonne per ogni variabile scelta
+        # Puliamo il nome dello scenario dalle lettere greche specificamente per il CSV
+        nome_csv_pulito = scenario['nome'].replace("ω", "omega").replace("φ_π", "phi_pi").replace("π", "pi")
+        
         for var in variabili_scelte:
             chiave_irf = f"{var}{scenario['suffisso']}"
             if chiave_irf in scenario['dati']:
-                nome_colonna = f"[{scenario['nome']}] {var}"
+                nome_colonna = f"[{nome_csv_pulito}] {var}"
                 df_temp[nome_colonna] = scenario['dati'][chiave_irf]
                 
-        # Impostiamo il trimestre come indice per unire più facilmente le tabelle
         df_temp = df_temp.set_index('Trimestre')
         df_lista.append(df_temp)
         
-    # Uniamo tutte le tabelle degli scenari in un'unica grande tabella affiancata
     if df_lista:
         df_finale = pd.concat(df_lista, axis=1)
         
-        # Convertiamo la tabella in CSV
         csv = df_finale.to_csv().encode('utf-8')
         
-        # Mostriamo il pulsante di download
         st.download_button(
             label="Scarica Dati in CSV",
             data=csv,
