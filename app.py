@@ -102,7 +102,7 @@ with st.sidebar.form("pannello_controllo"):
         min_value=0.01, max_value=0.95, value=0.5, step=0.01
     )
 
-    btn_aggiungi = st.form_submit_button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
+    btn_aggiungi = st.form_submit_button("➕ Aggiungi scenario", type="primary", use_container_width=True)
 
 # --- BARRA LATERALE: GESTIONE SCENARI ---
 st.sidebar.subheader("3. Scenari salvati")
