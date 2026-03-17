@@ -50,4 +50,4 @@ var eps = 1;
 var ms = 1;
 end;
 
-stoch_simul(irf=40);
+stoch_simul(irf=40, noprint, nograph);
