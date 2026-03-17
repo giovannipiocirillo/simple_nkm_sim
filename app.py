@@ -20,35 +20,37 @@ nomi_variabili = {
     'c': 'Consumo (c)', 'a': 'Produttività (a)', 'is': 'Shock Monetario (is)'
 }
 
-# --- BARRA LATERALE ---
-st.sidebar.header("1. Impostazioni Shock e Grafici")
-tipo_shock = st.sidebar.selectbox("Tipo di Shock:", ["Shock Monetario (ms)", "Shock Tecnologico (eps)"])
-intensita_shock = st.sidebar.number_input("Intensità dello shock:", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
-trimestri = st.sidebar.slider("Orizzonte temporale (trimestri):", min_value=10, max_value=100, value=40, step=5)
+# --- BARRA LATERALE: FORM ---
+st.sidebar.header("Pannello di Controllo")
 
-variabili_scelte = st.sidebar.multiselect(
-    "Variabili da osservare:",
-    options=list(nomi_variabili.keys()),
-    default=['y', 'pi', 'r'],
-    format_func=lambda x: nomi_variabili[x]
-)
+# Tutto ciò che è dentro questo 'with' non aggiornerà la pagina finché non si clicca il submit
+with st.sidebar.form("pannello_controllo"):
+    st.subheader("1. Impostazioni Shock e Grafici")
+    tipo_shock = st.selectbox("Tipo di Shock:", ["Shock Monetario (ms)", "Shock Tecnologico (eps)"])
+    intensita_shock = st.number_input("Intensità dello shock:", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
+    trimestri = st.slider("Orizzonte temporale (trimestri):", min_value=10, max_value=100, value=40, step=5)
 
-st.sidebar.divider()
-st.sidebar.header("2. Parametri Strutturali")
-beta = st.sidebar.slider("β - Fattore di sconto", min_value=0.90, max_value=0.99, value=0.99, step=0.01)
-gamma = st.sidebar.slider("γ - Inverso Frisch elasticity", min_value=0.1, max_value=3.0, value=1.0, step=0.1)
-omega = st.sidebar.slider("ω - Stickiness parameter", min_value=0.01, max_value=1.0, value=0.75, step=0.01)
-rhoa = st.sidebar.slider("ρ_a - Persistenza shock TFP", min_value=0.01, max_value=0.99, value=0.7, step=0.01)
-phip = st.sidebar.slider("φ_π - Taylor parameter", min_value=1.01, max_value=3.0, value=1.5, step=0.1)
-rhom = st.sidebar.slider("ρ_m - Persistenza shock monetario", min_value=0.01, max_value=0.99, value=0.5, step=0.01)
+    variabili_scelte = st.multiselect(
+        "Variabili da osservare:",
+        options=list(nomi_variabili.keys()),
+        default=['y', 'pi', 'r'],
+        format_func=lambda x: nomi_variabili[x]
+    )
 
-st.sidebar.divider()
+    st.divider()
+    st.subheader("2. Parametri Strutturali")
+    beta = st.slider("β - Fattore di sconto", min_value=0.90, max_value=0.99, value=0.99, step=0.01)
+    gamma = st.slider("γ - Inverso Frisch elasticity", min_value=0.1, max_value=3.0, value=1.0, step=0.1)
+    omega = st.slider("ω - Stickiness parameter", min_value=0.01, max_value=1.0, value=0.75, step=0.01)
+    rhoa = st.slider("ρ_a - Persistenza shock TFP", min_value=0.01, max_value=0.99, value=0.7, step=0.01)
+    phip = st.slider("φ_π - Taylor parameter", min_value=1.01, max_value=3.0, value=1.5, step=0.1)
+    rhom = st.slider("ρ_m - Persistenza shock monetario", min_value=0.01, max_value=0.99, value=0.5, step=0.01)
 
-col1, col2 = st.sidebar.columns(2)
-btn_aggiungi = col1.button("➕ Aggiungi", type="primary", use_container_width=True)
-btn_pulisci = col2.button("🗑️ Pulisci", use_container_width=True)
+    # Il pulsante di submit interno al form
+    btn_aggiungi = st.form_submit_button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
 
-if btn_pulisci:
+# Il pulsante per pulire resta fuori dal form, così funziona istantaneamente
+if st.sidebar.button("🗑️ Pulisci Tutti gli Scenari", use_container_width=True):
     st.session_state.scenari = []
     st.rerun()
 
@@ -113,7 +115,6 @@ if btn_aggiungi:
         for campo in irfs.dtype.names:
             irf_dict[campo] = irfs[campo].flatten()
             
-        # Creiamo l'etichetta per la legenda
         nome_scenario = f"Scen. {len(st.session_state.scenari)+1}: {tipo_shock[:8]} (ω={omega}, φ_π={phip})"
         
         st.session_state.scenari.append({
@@ -132,10 +133,10 @@ if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
     st.subheader(f"Confronto Scenari ({trimestri} trimestri)")
     
     colori = ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b']
-    cols = st.columns(3) # Organizza automaticamente i grafici su 3 colonne
+    cols = st.columns(3) 
     
     for idx, var in enumerate(variabili_scelte):
-        col_attuale = cols[idx % 3] # Seleziona la colonna in cui inserire il grafico
+        col_attuale = cols[idx % 3] 
         
         with col_attuale:
             fig, ax = plt.subplots(figsize=(5, 4))
@@ -158,6 +159,6 @@ if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
             plt.close(fig)
 
 elif len(st.session_state.scenari) == 0:
-    st.info("👈 Imposta i parametri e clicca su 'Aggiungi Scenario' per iniziare la simulazione.")
+    st.info("👈 Imposta i parametri nel form laterale e clicca su 'Aggiungi Scenario' per iniziare la simulazione.")
 elif len(variabili_scelte) == 0:
     st.warning("👈 Seleziona almeno una variabile da osservare nel menu a tendina.")
