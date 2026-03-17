@@ -27,18 +27,18 @@ gamma = st.sidebar.slider(
 
 omega = st.sidebar.slider(
     "ω - Stickiness parameter", 
-    min_value=0.1, max_value=0.95, value=0.75, step=0.05,
+    min_value=0, max_value=1, value=0.75, step=0.05,
     help="Il parametro ω (stickiness parameter) può essere interpretato anche come la probabilità che la generica impresa in ogni periodo t sia caratterizzata da prezzi vischiosi: questa ipotesi è la fonte delle rigidità nominali nel modello NKM.\n\nPer determinare l’indice aggregato dei prezzi nell’economia si può introdurre una semplice regola di Calvo (Calvo, 1983), per la quale le imprese che non riescono ad ottimizzare i prezzi al tempo t applicheranno il prezzo aggregato del periodo precedente t-1."
 )
 
 rhoa = st.sidebar.slider(
     "ρ_a - Persistenza shock TFP", 
-    min_value=0.0, max_value=0.95, value=0.7, step=0.05
+    min_value=0.0, max_value=0.99, value=0.7, step=0.05
 )
 
 phip = st.sidebar.slider(
     "φ_π - Taylor parameter", 
-    min_value=1.1, max_value=3.0, value=1.5, step=0.1,
+    min_value=1.01, max_value=3.0, value=1.5, step=0.1,
     help="Sintetizza il peso assegnato dalla banca centrale all’obiettivo di stabilità dell’inflazione nel proprio mandato. Secondo il principio di Taylor, il valore del Taylor parameter dovrebbe essere maggiore di uno (φ_π > 1), in quanto è opportuno che la banca centrale risponda in modo più che proporzionale agli scostamenti dell’inflazione dal suo livello obiettivo."
 )
 
