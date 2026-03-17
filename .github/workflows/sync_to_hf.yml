@@ -3,7 +3,6 @@ name: Sync to Hugging Face hub
 on:
   push:
     branches: [main]
-  # Permette di avviare il sync anche manualmente da GitHub
   workflow_dispatch:
 
 jobs:
@@ -11,12 +10,22 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-          lfs: true
-      - name: Push to hub
+        
+      - name: Deploy to Hugging Face
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          # 1. Cancelliamo la cronologia di Git così HF non vede i vecchi file
+          rm -rf .git
+          git init
+          git branch -M main
+          git config user.email "bot@action.github.com"
+          git config user.name "GitHub Action Bot"
+          
+          # 2. Aggiungiamo solo i file puliti che hai ora
+          git add .
+          git commit -m "Deploy pulito senza cronologia"
+          
+          # 3. Inviamo ad Hugging Face forzando la sovrascrittura
           git remote add space https://giovannipiocirillo:$HF_TOKEN@huggingface.co/spaces/giovannipiocirillo/simple_nkm_sim
           git push --force space main
