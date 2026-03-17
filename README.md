@@ -1,5 +1,5 @@
 ---
-title: NKM DSGE Simulator
+title: Simple NKM DSGE Simulator
 emoji: 📊
 colorFrom: blue
 colorTo: red
