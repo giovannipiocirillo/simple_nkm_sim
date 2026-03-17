@@ -36,36 +36,36 @@ with st.sidebar.form("pannello_controllo"):
 
     st.divider()
     st.subheader("2. Parametri Strutturali")
-    beta = st.sidebar.slider(
+    beta = st.slider(
         "β - Fattore di sconto del consumo", 
         min_value=0.90, max_value=0.99, value=0.99, step=0.01,
         help="Esprime la preferenza della famiglie per il consumo futuro (“pazienza” delle famiglie)."
     )
     
-    gamma = st.sidebar.slider(
+    gamma = st.slider(
         "γ - Inverso della Frisch elasticity", 
         min_value=0.1, max_value=3.0, value=1.0, step=0.1,
         help="Misura la variazione dell’offerta di lavoro al variare del salario. Pertanto, maggiore è la propensione delle famiglie nell’offrire lavoro all’aumentare del salario, maggiore è la Frisch Elasticity e minore è γ."
     )
     
-    omega = st.sidebar.slider(
+    omega = st.slider(
         "ω - Stickiness parameter", 
         min_value=0.01, max_value=1.0, value=0.75, step=0.01,
         help="Il parametro ω (stickiness parameter) può essere interpretato anche come la probabilità che la generica impresa in ogni periodo t sia caratterizzata da prezzi vischiosi: questa ipotesi è la fonte delle rigidità nominali nel modello NKM.\n\nPer determinare l’indice aggregato dei prezzi nell’economia si può introdurre una semplice regola di Calvo (Calvo, 1983), per la quale le imprese che non riescono ad ottimizzare i prezzi al tempo t applicheranno il prezzo aggregato del periodo precedente t-1."
     )
     
-    rhoa = st.sidebar.slider(
+    rhoa = st.slider(
         "ρ_a - Persistenza shock TFP", 
         min_value=0.01, max_value=0.99, value=0.7, step=0.01
     )
     
-    phip = st.sidebar.slider(
+    phip = st.slider(
         "φ_π - Taylor parameter", 
         min_value=1.01, max_value=3.0, value=1.5, step=0.1,
         help="Sintetizza il peso assegnato dalla banca centrale all’obiettivo di stabilità dell’inflazione nel proprio mandato. Secondo il principio di Taylor, il valore del Taylor parameter dovrebbe essere maggiore di uno (φ_π > 1), in quanto è opportuno che la banca centrale risponda in modo più che proporzionale agli scostamenti dell’inflazione dal suo livello obiettivo."
     )
     
-    rhom = st.sidebar.slider(
+    rhom = st.slider(
         "ρ_m - Persistenza shock monetario", 
         min_value=0.01, max_value=0.95, value=0.5, step=0.01
     )
