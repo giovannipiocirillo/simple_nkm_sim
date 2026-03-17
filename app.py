@@ -71,9 +71,12 @@ if st.sidebar.button("Simula Modello con Dynare", type="primary"):
         # Esegue il comando 'dynare NKM_lin.mod' nel terminale
         process = subprocess.run("dynare NKM_lin.mod console", shell=True, capture_output=True, text=True)
 
-        if process.returncode != 0:
+    if process.returncode != 0:
             st.error("Errore durante l'esecuzione di Dynare!")
+            st.markdown("**Output standard (stdout):**")
             st.code(process.stdout)
+            st.markdown("**Output di errore (stderr):**")
+            st.code(process.stderr)
             st.stop()
             
     # 3. LETTURA DEI RISULTATI (.mat)
