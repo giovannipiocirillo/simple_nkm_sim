@@ -7,7 +7,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from scipy.io import loadmat
 
-st.set_page_config(page_title="NKM DSGE con Dynare", layout="wide")
+st.set_page_config(page_title="Simple NKM DSGE Simulator", layout="wide")
 
 # --- INIEZIONE CSS PER LA BARRA LATERALE A TUTTO SCHERMO ---
 st.markdown("""
@@ -26,8 +26,8 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("Simulatore NKM DSGE (Multiscenario)")
-st.markdown("Imposta i parametri, scegli lo shock e clicca su **Aggiungi Scenario**. Puoi lanciare più simulazioni di fila per vederle sovrapposte!")
+st.title("Simulatore NKM DSGE")
+st.markdown("Imposta i parametri, scegli lo shock e clicca su **Aggiungi Scenario** per stimare l'impatto di uno shock macroeconomico")
 
 # --- INIZIALIZZAZIONE DELLA MEMORIA (SESSION STATE) ---
 if 'scenari' not in st.session_state:
@@ -40,12 +40,12 @@ nomi_variabili = {
 }
 
 # --- LINK ALLA TEORIA ---
-url_pdf = "https://github.com/TUO_USERNAME/NOME_REPO/blob/main/teoria_nkm.pdf"
+url_pdf = "https://github.com/giovannipiocirillo/simple_nkm_sim/blob/main/nkm_theory_ita.pdf"
 st.sidebar.markdown(
     f"""
     <a href="{url_pdf}" target="_blank" style="text-decoration: none;">
         <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; text-align: center; border: 1px solid #d1d5db; margin-bottom: 15px; margin-top: 10px;">
-            📖 <b>Leggi la Teoria (PDF)</b>
+            📖 <b>Spiegazione del modello (PDF)</b>
         </div>
     </a>
     """, 
@@ -67,7 +67,7 @@ with st.sidebar.form("pannello_controllo"):
     )
 
     st.divider()
-    st.subheader("2. Parametri Strutturali")
+    st.subheader("2. Parametri strutturali")
     beta = st.slider(
         "β - Fattore di sconto del consumo", 
         min_value=0.90, max_value=0.99, value=0.99, step=0.01,
@@ -105,7 +105,7 @@ with st.sidebar.form("pannello_controllo"):
     btn_aggiungi = st.form_submit_button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
 
 # --- BARRA LATERALE: GESTIONE SCENARI ---
-st.sidebar.subheader("3. Scenari Salvati")
+st.sidebar.subheader("3. Scenari salvati")
 
 if len(st.session_state.scenari) > 0:
     for i, scenario in enumerate(st.session_state.scenari):
@@ -117,11 +117,11 @@ if len(st.session_state.scenari) > 0:
             st.rerun()
 
     st.sidebar.divider()
-    if st.sidebar.button("🗑️ Svuota Tutti gli Scenari", use_container_width=True):
+    if st.sidebar.button("🗑️ Rimuovi tutti gli scenari", use_container_width=True):
         st.session_state.scenari = []
         st.rerun()
 else:
-    st.sidebar.info("Nessun scenario attualmente salvato.")
+    st.sidebar.info("Nessuno scenario attualmente salvato.")
 
 # --- ESECUZIONE MODELLO ---
 if btn_aggiungi:
