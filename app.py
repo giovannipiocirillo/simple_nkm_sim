@@ -22,6 +22,20 @@ nomi_variabili = {
     'c': 'Consumo (c)', 'a': 'Produttività (a)', 'is': 'Shock Monetario (is)'
 }
 
+# --- LINK ALLA TEORIA ---
+# Ricordati di sostituire questo link con il tuo link GitHub reale se usi il PDF
+url_pdf = "https://github.com/TUO_USERNAME/NOME_REPO/blob/main/teoria_nkm.pdf"
+st.sidebar.markdown(
+    f"""
+    <a href="{url_pdf}" target="_blank" style="text-decoration: none;">
+        <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; text-align: center; border: 1px solid #d1d5db; margin-bottom: 15px; margin-top: 10px;">
+            📖 <b>Leggi la Teoria (PDF)</b>
+        </div>
+    </a>
+    """, 
+    unsafe_allow_html=True
+)
+
 # --- BARRA LATERALE: FORM DI INSERIMENTO ---
 with st.sidebar.form("pannello_controllo"):
     st.subheader("1. Impostazioni Shock e Grafici")
@@ -46,20 +60,6 @@ with st.sidebar.form("pannello_controllo"):
     rhom = st.slider("ρ_m - Persistenza shock monetario", min_value=0.01, max_value=0.99, value=0.5, step=0.01)
 
     btn_aggiungi = st.form_submit_button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
-
-# --- LINK ALLA TEORIA ---
-# Ricordati di sostituire questo link con il tuo link GitHub reale se usi il PDF
-url_pdf = "https://github.com/TUO_USERNAME/NOME_REPO/blob/main/teoria_nkm.pdf"
-st.sidebar.markdown(
-    f"""
-    <a href="{url_pdf}" target="_blank" style="text-decoration: none;">
-        <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; text-align: center; border: 1px solid #d1d5db; margin-bottom: 15px; margin-top: 10px;">
-            📖 <b>Leggi la Teoria (PDF)</b>
-        </div>
-    </a>
-    """, 
-    unsafe_allow_html=True
-)
 
 # --- BARRA LATERALE: GESTIONE SCENARI ---
 st.sidebar.subheader("3. Scenari Salvati")
