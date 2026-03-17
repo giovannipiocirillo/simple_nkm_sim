@@ -69,15 +69,15 @@ if st.sidebar.button("Simula Modello con Dynare", type="primary"):
     # 2. ESECUZIONE DI DYNARE
     with st.spinner("Esecuzione di Dynare in corso (può richiedere qualche secondo)..."):
         # Esegue il comando 'dynare NKM_lin.mod' nel terminale
-        process = subprocess.run("dynare NKM_lin.mod console", shell=True, capture_output=True, text=True)
-
-    if process.returncode != 0:
-            st.error("Errore durante l'esecuzione di Dynare!")
-            st.markdown("**Output standard (stdout):**")
-            st.code(process.stdout)
-            st.markdown("**Output di errore (stderr):**")
-            st.code(process.stderr)
-            st.stop()
+        process = subprocess.run(["octave", "--no-gui", "--eval", "dynare NKM_lin.mod"], capture_output=True, text=True)
+    
+        if process.returncode != 0:
+                st.error("Errore durante l'esecuzione di Dynare!")
+                st.markdown("**Output standard (stdout):**")
+                st.code(process.stdout)
+                st.markdown("**Output di errore (stderr):**")
+                st.code(process.stderr)
+                st.stop()
             
     # 3. LETTURA DEI RISULTATI (.mat)
     try:
