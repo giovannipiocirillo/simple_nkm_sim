@@ -38,14 +38,14 @@ st.sidebar.markdown(
 # --- BARRA LATERALE: FORM DI INSERIMENTO ---
 with st.sidebar.form("pannello_controllo"):
     st.subheader("1. Impostazioni Shock e Grafici")
-    tipo_shock = st.selectbox("Tipo di Shock:", ["Shock Monetario (ms)", "Shock Tecnologico (eps)"])
+    tipo_shock = st.selectbox("Tipo di Shock:", ["Shock Tecnologico (eps)", "Shock Monetario (ms)"])
     intensita_shock = st.number_input("Intensità dello shock:", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
     trimestri = st.slider("Orizzonte temporale (trimestri):", min_value=10, max_value=100, value=40, step=5)
 
     variabili_scelte = st.multiselect(
         "Variabili da osservare:",
         options=list(nomi_variabili.keys()),
-        default=['y', 'pi', 'r'],
+        default=['a', 'mc', 'w', 'pi', 'r', 'c', 'y'],
         format_func=lambda x: nomi_variabili[x]
     )
 
