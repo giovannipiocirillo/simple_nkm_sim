@@ -27,7 +27,7 @@ gamma = st.sidebar.slider(
 
 omega = st.sidebar.slider(
     "ω - Stickiness parameter", 
-    min_value=0.01, max_value=1, value=0.75, step=0.01,
+    min_value=0.01, max_value=1.0, value=0.75, step=0.01,
     help="Il parametro ω (stickiness parameter) può essere interpretato anche come la probabilità che la generica impresa in ogni periodo t sia caratterizzata da prezzi vischiosi: questa ipotesi è la fonte delle rigidità nominali nel modello NKM.\n\nPer determinare l’indice aggregato dei prezzi nell’economia si può introdurre una semplice regola di Calvo (Calvo, 1983), per la quale le imprese che non riescono ad ottimizzare i prezzi al tempo t applicheranno il prezzo aggregato del periodo precedente t-1."
 )
 
