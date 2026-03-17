@@ -9,6 +9,23 @@ from scipy.io import loadmat
 
 st.set_page_config(page_title="NKM DSGE con Dynare", layout="wide")
 
+# --- INIEZIONE CSS PER LA BARRA LATERALE A TUTTO SCHERMO ---
+st.markdown("""
+    <style>
+        /* Forza la barra laterale ad allungarsi per tutta l'altezza della finestra (100vh) */
+        [data-testid="stSidebar"] {
+            height: 100vh !important;
+            min-width: 350px !important; /* La rende un po' più larga per i testi lunghi */
+        }
+        
+        /* Assicura che il contenuto interno sia scrollabile se supera l'altezza */
+        [data-testid="stSidebarUserContent"] {
+            height: 100% !important;
+            overflow-y: auto !important;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
 st.title("Simulatore NKM DSGE (Multiscenario)")
 st.markdown("Imposta i parametri, scegli lo shock e clicca su **Aggiungi Scenario**. Puoi lanciare più simulazioni di fila per vederle sovrapposte!")
 
