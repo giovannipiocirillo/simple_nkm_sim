@@ -72,9 +72,18 @@ if st.sidebar.button("Simula Modello con Dynare", type="primary"):
         comando_octave = "addpath('/usr/lib/dynare/matlab'); dynare NKM_lin.mod;"
         process = subprocess.run(["octave", "--no-gui", "--eval", comando_octave], capture_output=True, text=True)
         
-    # 3. LETTURA DEI RISULTATI (.mat) E GESTIONE ERRORI
+# 3. LETTURA DEI RISULTATI (.mat) E GESTIONE ERRORI
     try:
-        mat_data = loadmat("NKM_lin_results.mat")
+        import glob
+        # Dynare 6 salva i risultati in una sottocartella (es. NKM_lin/Output/)
+        # glob cerca il file ovunque si trovi all'interno del progetto
+        file_risultati = glob.glob("**/NKM_lin_results.mat", recursive=True)
+        
+        if not file_risultati:
+            raise FileNotFoundError("Il file NKM_lin_results.mat non è stato trovato!")
+            
+        # Carica il primo file trovato
+        mat_data = loadmat(file_risultati[0])
         irfs = mat_data['oo_'][0, 0]['irfs'][0, 0]
         
         y_ms = irfs['y_ms'].flatten()
@@ -121,10 +130,5 @@ if st.sidebar.button("Simula Modello con Dynare", type="primary"):
         st.pyplot(fig2)
 
     except Exception as e:
-        st.error("Ops! Dynare non ha generato i risultati.")
-        st.markdown("**Questo accade se c'è un errore matematico (es. violazione Blanchard-Kahn) o un problema di configurazione. Ecco il log esatto di Dynare per capire il problema:**")
-        
-        # Stampiamo a schermo cosa ha detto Octave/Dynare!
+        st.error(f"Ops! Qualcosa è andato storto: {e}")
         st.code(process.stdout)
-        if process.stderr:
-            st.code(process.stderr)
