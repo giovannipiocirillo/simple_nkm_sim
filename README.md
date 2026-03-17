@@ -11,7 +11,7 @@ pinned: false
 
 An interactive web application built with **Python**, **Streamlit** and **Dynare/Octave** to simulate and visualize a basic **New Keynesian DSGE Model**. 
 
-This platform allows students, researchers, and economics enthusiasts to easily interact with macroeconomic structural parameters, apply technological or monetary shocks, and immediately visualize the Impulse Response Functions (IRFs) across multiple comparative scenarios.
+This platform allows students and economics enthusiasts to easily interact with macroeconomic structural parameters, apply technological or monetary shocks, and immediately visualize the Impulse Response Functions (IRFs) across multiple comparative scenarios.
 
 ![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Streamlit](https://img.shields.io/badge/Streamlit-FF4B4B?style=for-the-badge&logo=Streamlit&logoColor=white)
