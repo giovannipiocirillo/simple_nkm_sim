@@ -66,33 +66,21 @@ if st.sidebar.button("Simula Modello con Dynare", type="primary"):
     with open("NKM_lin.mod", "w") as f:
         f.write(mod_content)
 
-    # 2. ESECUZIONE DI DYNARE
+# 2. ESECUZIONE DI DYNARE
     with st.spinner("Esecuzione di Dynare in corso (può richiedere qualche secondo)..."):
-        # Esegue il comando 'dynare NKM_lin.mod' nel terminale
-        process = subprocess.run(["octave", "--no-gui", "--eval", "dynare NKM_lin.mod"], capture_output=True, text=True)
-    
-        if process.returncode != 0:
-                st.error("Errore durante l'esecuzione di Dynare!")
-                st.markdown("**Output standard (stdout):**")
-                st.code(process.stdout)
-                st.markdown("**Output di errore (stderr):**")
-                st.code(process.stderr)
-                st.stop()
-            
-    # 3. LETTURA DEI RISULTATI (.mat)
-    try:
-        # Dynare salva le variabili nell'ambiente oo_ dentro il file dei risultati
-        mat_data = loadmat("NKM_lin_results.mat")
+        # Diciamo a Octave esattamente dove trovare Dynare su Linux Debian e poi lanciamo il modello
+        comando_octave = "addpath('/usr/lib/dynare/matlab'); dynare NKM_lin.mod;"
+        process = subprocess.run(["octave", "--no-gui", "--eval", comando_octave], capture_output=True, text=True)
         
-        # In python, la struttura struct di MATLAB diventa una serie di array annidati
+    # 3. LETTURA DEI RISULTATI (.mat) E GESTIONE ERRORI
+    try:
+        mat_data = loadmat("NKM_lin_results.mat")
         irfs = mat_data['oo_'][0, 0]['irfs'][0, 0]
         
-        # Estraiamo le risposte di Y, PI ed R allo shock monetario (ms)
         y_ms = irfs['y_ms'].flatten()
         pi_ms = irfs['pi_ms'].flatten()
         r_ms = irfs['r_ms'].flatten()
         
-        # Estraiamo le risposte di Y, PI ed R allo shock tecnologico (eps)
         y_eps = irfs['y_eps'].flatten()
         pi_eps = irfs['pi_eps'].flatten()
         r_eps = irfs['r_eps'].flatten()
@@ -104,31 +92,39 @@ if st.sidebar.button("Simula Modello con Dynare", type="primary"):
         
         st.markdown("#### Shock Monetario Espansivo ($ms$)")
         fig1, axs1 = plt.subplots(1, 3, figsize=(15, 4))
-        axs1[0].plot(t, y_ms, color='blue')
+        axs1[0].plot(t, y_ms, color='blue', marker='.')
         axs1[0].set_title("Output ($y$)")
-        axs1[1].plot(t, pi_ms, color='red')
+        axs1[1].plot(t, pi_ms, color='red', marker='.')
         axs1[1].set_title("Inflazione ($\pi$)")
-        axs1[2].plot(t, r_ms, color='green')
+        axs1[2].plot(t, r_ms, color='green', marker='.')
         axs1[2].set_title("Tasso di Interesse ($r$)")
         
         for ax in axs1:
             ax.axhline(0, color='black', linestyle='--', linewidth=0.8)
             ax.grid(True, alpha=0.3)
+            ax.set_xlabel("Trimestri")
         st.pyplot(fig1)
 
         st.markdown("#### Shock Tecnologico ($eps$)")
         fig2, axs2 = plt.subplots(1, 3, figsize=(15, 4))
-        axs2[0].plot(t, y_eps, color='blue')
+        axs2[0].plot(t, y_eps, color='blue', marker='.')
         axs2[0].set_title("Output ($y$)")
-        axs2[1].plot(t, pi_eps, color='red')
+        axs2[1].plot(t, pi_eps, color='red', marker='.')
         axs2[1].set_title("Inflazione ($\pi$)")
-        axs2[2].plot(t, r_eps, color='green')
+        axs2[2].plot(t, r_eps, color='green', marker='.')
         axs2[2].set_title("Tasso di Interesse ($r$)")
         
         for ax in axs2:
             ax.axhline(0, color='black', linestyle='--', linewidth=0.8)
             ax.grid(True, alpha=0.3)
+            ax.set_xlabel("Trimestri")
         st.pyplot(fig2)
 
     except Exception as e:
-        st.error(f"Impossibile leggere il file dei risultati. Errore: {e}")
+        st.error("Ops! Dynare non ha generato i risultati.")
+        st.markdown("**Questo accade se c'è un errore matematico (es. violazione Blanchard-Kahn) o un problema di configurazione. Ecco il log esatto di Dynare per capire il problema:**")
+        
+        # Stampiamo a schermo cosa ha detto Octave/Dynare!
+        st.code(process.stdout)
+        if process.stderr:
+            st.code(process.stderr)
