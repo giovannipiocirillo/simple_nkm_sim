@@ -7,32 +7,25 @@ from scipy.io import loadmat
 
 st.set_page_config(page_title="NKM DSGE con Dynare", layout="wide")
 
-st.title("Simulatore NKM DSGE Multiscenario")
-st.markdown("Imposta i parametri, scegli lo shock e clicca su **Aggiungi Scenario**. Puoi aggiungere più scenari per confrontarli sugli stessi grafici!")
+st.title("Simulatore NKM DSGE (Multiscenario)")
+st.markdown("Imposta i parametri, scegli lo shock e clicca su **Aggiungi Scenario**. Puoi lanciare più simulazioni di fila per vederle sovrapposte!")
 
 # --- INIZIALIZZAZIONE DELLA MEMORIA (SESSION STATE) ---
-# Qui diciamo a Streamlit di creare un "cassetto" per salvare gli scenari, se non esiste già
 if 'scenari' not in st.session_state:
     st.session_state.scenari = []
 
-# Dizionario per tradurre le variabili nei grafici
 nomi_variabili = {
-    'y': 'Output (y)', 'pi': 'Inflazione (π)', 'r': 'Tasso (r)', 
-    'w': 'Salario (w)', 'mc': 'Costo Marg. (mc)', 'l': 'Lavoro (l)', 
-    'c': 'Consumo (c)', 'a': 'Produttività (a)', 'is': 'Shock Mon. (is)'
+    'y': 'Output (y)', 'pi': 'Inflazione (π)', 'r': 'Tasso di Interesse (r)', 
+    'w': 'Salario (w)', 'mc': 'Costo Marginale (mc)', 'l': 'Lavoro (l)', 
+    'c': 'Consumo (c)', 'a': 'Produttività (a)', 'is': 'Shock Monetario (is)'
 }
 
-# --- BARRA LATERALE: CONTROLLI ---
+# --- BARRA LATERALE ---
 st.sidebar.header("1. Impostazioni Shock e Grafici")
+tipo_shock = st.sidebar.selectbox("Tipo di Shock:", ["Shock Monetario (ms)", "Shock Tecnologico (eps)"])
+intensita_shock = st.sidebar.number_input("Intensità dello shock:", min_value=0.1, max_value=5.0, value=1.0, step=0.1)
+trimestri = st.sidebar.slider("Orizzonte temporale (trimestri):", min_value=10, max_value=100, value=40, step=5)
 
-# Scelta del tipo di shock e intensità
-tipo_shock = st.sidebar.radio("Tipo di Shock:", ["Monetario (ms)", "Tecnologico (eps)"])
-intensita_shock = st.sidebar.number_input("Intensità dello Shock (Varianza):", min_value=0.01, max_value=10.0, value=1.00, step=0.1)
-
-# Scelta dell'orizzonte temporale
-trimestri = st.sidebar.slider("Orizzonte temporale (Trimestri):", min_value=10, max_value=100, value=40, step=5)
-
-# Scelta delle variabili da mostrare
 variabili_scelte = st.sidebar.multiselect(
     "Variabili da osservare:",
     options=list(nomi_variabili.keys()),
@@ -41,8 +34,7 @@ variabili_scelte = st.sidebar.multiselect(
 )
 
 st.sidebar.divider()
-st.sidebar.header("2. Parametri del Modello")
-
+st.sidebar.header("2. Parametri Strutturali")
 beta = st.sidebar.slider("β - Fattore di sconto", min_value=0.90, max_value=0.99, value=0.99, step=0.01)
 gamma = st.sidebar.slider("γ - Inverso Frisch elasticity", min_value=0.1, max_value=3.0, value=1.0, step=0.1)
 omega = st.sidebar.slider("ω - Stickiness parameter", min_value=0.01, max_value=1.0, value=0.75, step=0.01)
@@ -52,24 +44,21 @@ rhom = st.sidebar.slider("ρ_m - Persistenza shock monetario", min_value=0.01, m
 
 st.sidebar.divider()
 
-# Bottoni per gestire le simulazioni
-col_btn1, col_btn2 = st.sidebar.columns(2)
-aggiungi_btn = col_btn1.button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
-cancella_btn = col_btn2.button("🗑️ Pulisci", use_container_width=True)
+col1, col2 = st.sidebar.columns(2)
+btn_aggiungi = col1.button("➕ Aggiungi", type="primary", use_container_width=True)
+btn_pulisci = col2.button("🗑️ Pulisci", use_container_width=True)
 
-if cancella_btn:
+if btn_pulisci:
     st.session_state.scenari = []
     st.rerun()
 
-# --- LOGICA DI ESECUZIONE ---
-if aggiungi_btn:
-    
-    # Impostiamo le varianze in base alla scelta dell'utente
-    var_eps = intensita_shock if tipo_shock == "Tecnologico (eps)" else 0
-    var_ms = intensita_shock if tipo_shock == "Monetario (ms)" else 0
-    
-    # Generiamo il file .mod dinamicamente
+# --- ESECUZIONE MODELLO ---
+if btn_aggiungi:
+    var_eps = intensita_shock if "Tecnologico" in tipo_shock else 0.0
+    var_ms = intensita_shock if "Monetario" in tipo_shock else 0.0
+
     mod_content = f"""
+    % NKM Linearizzato
     var lambda c w l r pi mc a y is;
     varexo eps ms;
     parameters GAMMA OMEGA BETA KAPPA PHIP RHOA RHOM;
@@ -115,78 +104,61 @@ if aggiungi_btn:
     try:
         file_risultati = glob.glob("**/NKM_lin_results.mat", recursive=True)
         if not file_risultati:
-            raise FileNotFoundError("File dei risultati non trovato.")
+            raise FileNotFoundError("Il file NKM_lin_results non è stato trovato!")
             
         mat_data = loadmat(file_risultati[0])
         irfs = mat_data['oo_'][0, 0]['irfs'][0, 0]
         
-        # Estraiamo tutte le IRF disponibili e le salviamo in un dizionario Python pulito
         irf_dict = {}
         for campo in irfs.dtype.names:
             irf_dict[campo] = irfs[campo].flatten()
             
-        # Creiamo un nome per identificare lo scenario
-        nome_scenario = f"Scen. {len(st.session_state.scenari)+1}: {tipo_shock[:4]} (Int:{intensita_shock}, ω:{omega}, φ_π:{phip})"
+        # Creiamo l'etichetta per la legenda
+        nome_scenario = f"Scen. {len(st.session_state.scenari)+1}: {tipo_shock[:8]} (ω={omega}, φ_π={phip})"
         
-        # Salviamo tutto nel "cassetto" della session_state
-        nuovo_scenario = {
+        st.session_state.scenari.append({
             'nome': nome_scenario,
             'dati': irf_dict,
             'tempo': np.arange(trimestri),
-            'suffisso_shock': '_ms' if tipo_shock == "Monetario (ms)" else '_eps'
-        }
-        st.session_state.scenari.append(nuovo_scenario)
-
+            'suffisso': '_ms' if "Monetario" in tipo_shock else '_eps'
+        })
+        
     except Exception as e:
-        st.error(f"Errore durante l'estrazione: {e}")
+        st.error(f"Errore durante l'estrazione dei dati: {e}")
         st.code(process.stdout)
 
 # --- VISUALIZZAZIONE GRAFICI ---
 if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
     st.subheader(f"Confronto Scenari ({trimestri} trimestri)")
     
-    # Calcoliamo righe e colonne per avere una griglia bella da vedere (max 3 grafici per riga)
-    colonne_griglia = 3
-    righe_griglia = (len(variabili_scelte) + colonne_griglia - 1) // colonne_griglia
+    colori = ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b']
+    cols = st.columns(3) # Organizza automaticamente i grafici su 3 colonne
     
-    fig, axes = plt.subplots(righe_griglia, colonne_griglia, figsize=(15, 4 * righe_griglia))
-    
-    # Trasformiamo axes in un array 1D per iterarci facilmente, anche se c'è un solo grafico
-    if type(axes) is not np.ndarray:
-        axes = [axes]
-    else:
-        axes = axes.flatten()
+    for idx, var in enumerate(variabili_scelte):
+        col_attuale = cols[idx % 3] # Seleziona la colonna in cui inserire il grafico
         
-    colori = ['#1f77b4', '#ff7f0e', '#2ca02c', '#d62728', '#9467bd', '#8c564b']
-
-    # Disegniamo ogni variabile selezionata
-    for i, var in enumerate(variabili_scelte):
-        ax = axes[i]
-        
-        # Sovrapponiamo tutti gli scenari salvati
-        for j, scenario in enumerate(st.session_state.scenari):
-            chiave_irf = f"{var}{scenario['suffisso_shock']}"
+        with col_attuale:
+            fig, ax = plt.subplots(figsize=(5, 4))
             
-            # Controlla se Dynare ha generato la IRF per questa variabile e questo shock
-            if chiave_irf in scenario['dati']:
-                ax.plot(scenario['tempo'], scenario['dati'][chiave_irf], 
-                        color=colori[j % len(colori)], marker='.', label=scenario['nome'])
+            for j, scenario in enumerate(st.session_state.scenari):
+                chiave_irf = f"{var}{scenario['suffisso']}"
+                if chiave_irf in scenario['dati']:
+                    ax.plot(scenario['tempo'], scenario['dati'][chiave_irf], 
+                            color=colori[j % len(colori)], marker='.', label=scenario['nome'])
+            
+            ax.set_title(nomi_variabili[var], fontweight='bold')
+            ax.axhline(0, color='black', linestyle='--', linewidth=0.8)
+            ax.grid(True, alpha=0.3)
+            ax.set_xlabel("Trimestri")
+            
+            # Mostra la legenda solo nel primo grafico per non occupare troppo spazio
+            if idx == 0:
+                ax.legend(fontsize='small', loc='best')
                 
-        ax.set_title(nomi_variabili[var], fontweight='bold')
-        ax.axhline(0, color='black', linestyle='--', linewidth=0.8)
-        ax.grid(True, alpha=0.3)
-        ax.set_xlabel("Trimestri")
-        if i == 0: # Mettiamo la legenda solo nel primo grafico per non ingombrare
-            ax.legend(fontsize='small', loc='best')
-
-    # Nascondiamo i grafici vuoti (se l'utente ha scelto es. 4 variabili, abbiamo 2 spazi vuoti nella griglia 2x3)
-    for i in range(len(variabili_scelte), len(axes)):
-        fig.delaxes(axes[i])
-        
-    st.pyplot(fig)
-    plt.close(fig)
+            st.pyplot(fig)
+            plt.close(fig) # Chiude la figura per evitare sovraccarichi di memoria
 
 elif len(st.session_state.scenari) == 0:
-    st.info("👈 Imposta i parametri e clicca su 'Aggiungi Scenario' per iniziare.")
+    st.info("👈 Imposta i parametri e clicca su 'Aggiungi Scenario' per iniziare la simulazione.")
 elif len(variabili_scelte) == 0:
-    st.warning("👈 Seleziona almeno una variabile da osservare nel menu laterale.")
+    st.warning("👈 Seleziona almeno una variabile da osservare nel menu a tendina.")
