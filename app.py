@@ -1,8 +1,10 @@
 import streamlit as st
 import numpy as np
-import matplotlib.pyplot as plt
 import subprocess
 import glob
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from scipy.io import loadmat
 
 st.set_page_config(page_title="NKM DSGE con Dynare", layout="wide")
@@ -21,10 +23,6 @@ nomi_variabili = {
 }
 
 # --- BARRA LATERALE: FORM DI INSERIMENTO ---
-# --- LINK ALLA TEORIA ---
-# Sostituisci TUO_USERNAME e NOME_REPO con i tuoi dati reali di GitHub
-st.sidebar.markdown("[Vai alla pagina della teoria 📖](https://tuo-nome.github.io/teoria-nkm)")
-    
 with st.sidebar.form("pannello_controllo"):
     st.subheader("1. Impostazioni Shock e Grafici")
     tipo_shock = st.selectbox("Tipo di Shock:", ["Shock Monetario (ms)", "Shock Tecnologico (eps)"])
@@ -40,42 +38,28 @@ with st.sidebar.form("pannello_controllo"):
 
     st.divider()
     st.subheader("2. Parametri Strutturali")
-    beta = st.slider(
-        "β - Fattore di sconto del consumo", 
-        min_value=0.90, max_value=0.99, value=0.99, step=0.01,
-        help="Esprime la preferenza della famiglie per il consumo futuro (“pazienza” delle famiglie)."
-    )
-    
-    gamma = st.slider(
-        "γ - Inverso della Frisch elasticity", 
-        min_value=0.1, max_value=3.0, value=1.0, step=0.1,
-        help="Misura la variazione dell’offerta di lavoro al variare del salario. Pertanto, maggiore è la propensione delle famiglie nell’offrire lavoro all’aumentare del salario, maggiore è la Frisch Elasticity e minore è γ."
-    )
-    
-    omega = st.slider(
-        "ω - Stickiness parameter", 
-        min_value=0.01, max_value=1.0, value=0.75, step=0.01,
-        help="Il parametro ω (stickiness parameter) può essere interpretato anche come la probabilità che la generica impresa in ogni periodo t sia caratterizzata da prezzi vischiosi: questa ipotesi è la fonte delle rigidità nominali nel modello NKM.\n\nPer determinare l’indice aggregato dei prezzi nell’economia si può introdurre una semplice regola di Calvo (Calvo, 1983), per la quale le imprese che non riescono ad ottimizzare i prezzi al tempo t applicheranno il prezzo aggregato del periodo precedente t-1."
-    )
-    
-    rhoa = st.slider(
-        "ρ_a - Persistenza shock TFP", 
-        min_value=0.01, max_value=0.99, value=0.7, step=0.01
-    )
-    
-    phip = st.slider(
-        "φ_π - Taylor parameter", 
-        min_value=1.01, max_value=3.0, value=1.5, step=0.1,
-        help="Sintetizza il peso assegnato dalla banca centrale all’obiettivo di stabilità dell’inflazione nel proprio mandato. Secondo il principio di Taylor, il valore del Taylor parameter dovrebbe essere maggiore di uno (φ_π > 1), in quanto è opportuno che la banca centrale risponda in modo più che proporzionale agli scostamenti dell’inflazione dal suo livello obiettivo."
-    )
-    
-    rhom = st.slider(
-        "ρ_m - Persistenza shock monetario", 
-        min_value=0.01, max_value=0.95, value=0.5, step=0.01
-    )
+    beta = st.slider("β - Fattore di sconto", min_value=0.90, max_value=0.99, value=0.99, step=0.01)
+    gamma = st.slider("γ - Inverso Frisch elasticity", min_value=0.1, max_value=3.0, value=1.0, step=0.1)
+    omega = st.slider("ω - Stickiness parameter", min_value=0.01, max_value=1.0, value=0.75, step=0.01)
+    rhoa = st.slider("ρ_a - Persistenza shock TFP", min_value=0.01, max_value=0.99, value=0.7, step=0.01)
+    phip = st.slider("φ_π - Taylor parameter", min_value=1.01, max_value=3.0, value=1.5, step=0.1)
+    rhom = st.slider("ρ_m - Persistenza shock monetario", min_value=0.01, max_value=0.99, value=0.5, step=0.01)
 
-    # Pulsante per confermare e lanciare Dynare
     btn_aggiungi = st.form_submit_button("➕ Aggiungi Scenario", type="primary", use_container_width=True)
+
+# --- LINK ALLA TEORIA ---
+# Ricordati di sostituire questo link con il tuo link GitHub reale se usi il PDF
+url_pdf = "https://github.com/TUO_USERNAME/NOME_REPO/blob/main/teoria_nkm.pdf"
+st.sidebar.markdown(
+    f"""
+    <a href="{url_pdf}" target="_blank" style="text-decoration: none;">
+        <div style="background-color: #f0f2f6; padding: 10px; border-radius: 5px; text-align: center; border: 1px solid #d1d5db; margin-bottom: 15px; margin-top: 10px;">
+            📖 <b>Leggi la Teoria (PDF)</b>
+        </div>
+    </a>
+    """, 
+    unsafe_allow_html=True
+)
 
 # --- BARRA LATERALE: GESTIONE SCENARI ---
 st.sidebar.subheader("3. Scenari Salvati")
@@ -90,7 +74,6 @@ if len(st.session_state.scenari) > 0:
             st.rerun()
 
     st.sidebar.divider()
-    # ECCO L'UNICO PULSANTE DI PULIZIA GLOBALE
     if st.sidebar.button("🗑️ Svuota Tutti gli Scenari", use_container_width=True):
         st.session_state.scenari = []
         st.rerun()
@@ -174,35 +157,93 @@ if btn_aggiungi:
         st.error(f"Errore durante l'estrazione dei dati: {e}")
         st.code(process.stdout)
 
-# --- VISUALIZZAZIONE GRAFICI ---
+# --- VISUALIZZAZIONE GRAFICI INTERATTIVI (PLOTLY) E DOWNLOAD DATI ---
 if len(st.session_state.scenari) > 0 and len(variabili_scelte) > 0:
     st.subheader(f"Confronto Scenari ({trimestri} trimestri)")
     
+    # 1. GENERAZIONE GRAFICI CON PLOTLY
+    # Calcoliamo le righe e colonne dinamiche (max 3 per riga)
+    num_vars = len(variabili_scelte)
+    cols_count = min(3, num_vars)
+    rows_count = ((num_vars - 1) // 3) + 1
+    
+    titoli_subplot = [nomi_variabili[v] for v in variabili_scelte]
+    fig = make_subplots(rows=rows_count, cols=cols_count, subplot_titles=titoli_subplot)
+    
     colori = ['#1f77b4', '#d62728', '#2ca02c', '#ff7f0e', '#9467bd', '#8c564b']
-    cols = st.columns(3) 
     
     for idx, var in enumerate(variabili_scelte):
-        col_attuale = cols[idx % 3] 
+        riga = (idx // 3) + 1
+        colonna = (idx % 3) + 1
         
-        with col_attuale:
-            fig, ax = plt.subplots(figsize=(5, 4))
-            
-            for j, scenario in enumerate(st.session_state.scenari):
-                chiave_irf = f"{var}{scenario['suffisso']}"
-                if chiave_irf in scenario['dati']:
-                    ax.plot(scenario['tempo'], scenario['dati'][chiave_irf], 
-                            color=colori[j % len(colori)], marker='.', label=scenario['nome'])
-            
-            ax.set_title(nomi_variabili[var], fontweight='bold')
-            ax.axhline(0, color='black', linestyle='--', linewidth=0.8)
-            ax.grid(True, alpha=0.3)
-            ax.set_xlabel("Trimestri")
-            
-            if idx == 0:
-                ax.legend(fontsize='small', loc='best')
+        for j, scenario in enumerate(st.session_state.scenari):
+            chiave_irf = f"{var}{scenario['suffisso']}"
+            if chiave_irf in scenario['dati']:
+                # Mostriamo la legenda solo nel primo grafico per non ripeterla per ogni subplot
+                mostra_legenda = True if idx == 0 else False
                 
-            st.pyplot(fig)
-            plt.close(fig)
+                fig.add_trace(go.Scatter(
+                    x=scenario['tempo'],
+                    y=scenario['dati'][chiave_irf],
+                    mode='lines+markers',
+                    name=scenario['nome'],
+                    legendgroup=scenario['nome'], # Raggruppa la legenda in modo che nasconda le linee su tutti i grafici
+                    showlegend=mostra_legenda,
+                    line=dict(color=colori[j % len(colori)]),
+                    marker=dict(size=6)
+                ), row=riga, col=colonna)
+        
+        # Linea orizzontale per lo zero (steady state)
+        fig.add_hline(y=0, line_dash="dash", line_color="black", line_width=1, row=riga, col=colonna)
+        # Etichetta asse X
+        fig.update_xaxes(title_text="Trimestri", row=riga, col=colonna)
+
+    # Impostazioni generali del layout Plotly
+    altezza_totale = max(400, 300 * rows_count)
+    fig.update_layout(
+        height=altezza_totale, 
+        margin=dict(t=50, l=20, r=20, b=20),
+        hovermode="x unified", # Mostra tutti i valori in verticale passandoci sopra il mouse
+        legend=dict(orientation="h", yanchor="bottom", y=1.05, xanchor="right", x=1)
+    )
+    
+    st.plotly_chart(fig, use_container_width=True)
+
+    # 2. GENERAZIONE TABELLA DATI PER IL DOWNLOAD
+    st.divider()
+    st.markdown("### 📥 Esporta Dati")
+    
+    # Creiamo un DataFrame Pandas che unisce tutti gli scenari
+    df_lista = []
+    for scenario in st.session_state.scenari:
+        # Creiamo la tabella per il singolo scenario partendo dalla colonna "Trimestri"
+        df_temp = pd.DataFrame({'Trimestre': scenario['tempo']})
+        
+        # Aggiungiamo le colonne per ogni variabile scelta
+        for var in variabili_scelte:
+            chiave_irf = f"{var}{scenario['suffisso']}"
+            if chiave_irf in scenario['dati']:
+                nome_colonna = f"[{scenario['nome']}] {var}"
+                df_temp[nome_colonna] = scenario['dati'][chiave_irf]
+                
+        # Impostiamo il trimestre come indice per unire più facilmente le tabelle
+        df_temp = df_temp.set_index('Trimestre')
+        df_lista.append(df_temp)
+        
+    # Uniamo tutte le tabelle degli scenari in un'unica grande tabella affiancata
+    if df_lista:
+        df_finale = pd.concat(df_lista, axis=1)
+        
+        # Convertiamo la tabella in CSV
+        csv = df_finale.to_csv().encode('utf-8')
+        
+        # Mostriamo il pulsante di download
+        st.download_button(
+            label="Scarica Dati in CSV",
+            data=csv,
+            file_name="simulazione_NKM_DSGE.csv",
+            mime="text/csv",
+        )
 
 elif len(st.session_state.scenari) == 0:
     st.info("👈 Imposta i parametri nel form laterale e clicca su 'Aggiungi Scenario' per iniziare la simulazione.")
